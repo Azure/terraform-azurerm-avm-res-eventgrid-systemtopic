@@ -1,25 +1,85 @@
-# TODO: Replace this dummy resource azurerm_resource_group.TODO with your module resource
-resource "azurerm_resource_group" "TODO" {
-  location = var.location
-  name     = var.name # calling code must supply the name
-  tags     = var.tags
+# Create the Event Grid System Topic using the AzAPI provider and the 2023-12-15-preview API version
+resource "azapi_resource" "this" {
+  type      = "Microsoft.EventGrid/systemTopics@2023-12-15-preview"
+  name      = var.name
+  location  = var.location
+  parent_id = var.parent_id
+
+  body = {
+    properties = {
+      source    = var.source_arm_resource_id
+      topicType = var.topic_type
+    }
+    identity = var.identity != null ? {
+      type = var.identity.type
+      userAssignedIdentities = var.identity.type != "SystemAssigned" && var.identity.identity_ids != null ? {
+        for id in var.identity.identity_ids : id => {}
+      } : null
+    } : null
+  }
+
+  tags = var.tags
+
+  lifecycle {
+    ignore_changes = [
+      tags["created_date"],
+      tags["created_by"]
+    ]
+  }
 }
 
-# required AVM resources interfaces
-resource "azurerm_management_lock" "this" {
-  count = var.lock != null ? 1 : 0
+# Diagnostic settings for the System Topic
+resource "azurerm_monitor_diagnostic_setting" "this" {
+  for_each = var.diagnostic_settings
 
-  lock_level = var.lock.kind
-  name       = coalesce(var.lock.name, "lock-${var.lock.kind}")
-  scope      = azurerm_resource_group.TODO.id # TODO: Replace with your azurerm resource name
-  notes      = var.lock.kind == "CanNotDelete" ? "Cannot delete the resource or its child resources." : "Cannot delete or modify the resource or its child resources."
+  name                           = coalesce(each.value.name, "${var.name}-diag-${each.key}")
+  target_resource_id             = azapi_resource.this.id
+  eventhub_authorization_rule_id = each.value.event_hub_authorization_rule_resource_id
+  eventhub_name                  = each.value.event_hub_name
+  log_analytics_destination_type = each.value.log_analytics_destination_type
+  log_analytics_workspace_id     = each.value.workspace_resource_id
+  partner_solution_id            = each.value.marketplace_partner_resource_id
+  storage_account_id             = each.value.storage_account_resource_id
+
+  dynamic "enabled_log" {
+    for_each = length(each.value.log_categories) > 0 ? each.value.log_categories : []
+
+    content {
+      category = enabled_log.value
+    }
+  }
+  dynamic "enabled_metric" {
+    for_each = length(each.value.metric_categories) > 0 ? each.value.metric_categories : []
+
+    content {
+      category = enabled_metric.value
+    }
+  }
+
+  lifecycle {
+    ignore_changes = [
+      # Azure API doesn't return log_analytics_destination_type in response
+      # causing perpetual drift - ignore changes to prevent this
+      log_analytics_destination_type
+    ]
+  }
+}
+
+# required AVM resources interfaces (scoped to the created system topic)
+resource "azurerm_management_lock" "this" {
+  count = var.locks != null ? 1 : 0
+
+  lock_level = var.locks.kind
+  name       = coalesce(var.locks.name, "lock-${var.locks.kind}")
+  scope      = azapi_resource.this.id
+  notes      = var.locks.kind == "CanNotDelete" ? "Cannot delete the resource or its child resources." : "Cannot delete or modify the resource or its child resources."
 }
 
 resource "azurerm_role_assignment" "this" {
   for_each = var.role_assignments
 
   principal_id                           = each.value.principal_id
-  scope                                  = azurerm_resource_group.TODO.id # TODO: Replace this dummy resource azurerm_resource_group.TODO with your module resource
+  scope                                  = azapi_resource.this.id
   condition                              = each.value.condition
   condition_version                      = each.value.condition_version
   delegated_managed_identity_resource_id = each.value.delegated_managed_identity_resource_id
