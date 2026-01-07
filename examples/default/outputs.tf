@@ -8,7 +8,7 @@ output "event_subscriptions" {
 
 output "storage_account_id" {
   description = "The ID of the Storage Account (Event Source)"
-  value       = data.azurerm_storage_account.example.id
+  value       = azurerm_storage_account.example.id
 }
 
 output "system_topic_id" {

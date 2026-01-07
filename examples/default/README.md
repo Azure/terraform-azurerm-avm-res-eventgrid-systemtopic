@@ -22,6 +22,7 @@ terraform {
 
 provider "azurerm" {
   features {}
+  storage_use_azuread = true
 }
 
 provider "azapi" {
@@ -30,7 +31,7 @@ provider "azapi" {
 # =========================================
 # DATA SOURCES
 # =========================================
-
+data "azurerm_client_config" "current" {}
 # Get current client configuration for AzAPI
 data "azapi_client_config" "current" {}
 
@@ -51,13 +52,32 @@ resource "azurerm_storage_account" "example" {
   account_replication_type  = "LRS"
   account_tier              = "Standard"
   location                  = azurerm_resource_group.example.location
-  name                      = "steventgridsample41"
+  name                      = "steventgridsample42"
   resource_group_name       = azurerm_resource_group.example.name
+  local_user_enabled        = false
   shared_access_key_enabled = false
   tags = {
     Environment = "Development"
     Purpose     = "EventGrid Source"
   }
+}
+
+# =========================================
+# RBAC ASSIGNMENTS FOR TERRAFORM IDENTITY
+# =========================================
+
+# Grant Storage Blob Data Contributor to Terraform identity for blob operations
+resource "azurerm_role_assignment" "terraform_blob_contributor" {
+  principal_id         = data.azurerm_client_config.current.object_id
+  scope                = azurerm_storage_account.example.id
+  role_definition_name = "Storage Blob Data Contributor"
+}
+
+# Grant Storage Queue Data Contributor to Terraform identity for queue operations
+resource "azurerm_role_assignment" "terraform_queue_contributor" {
+  principal_id         = data.azurerm_client_config.current.object_id
+  scope                = azurerm_storage_account.example.id
+  role_definition_name = "Storage Queue Data Contributor"
 }
 
 # data "azurerm_storage_account" "example" {
@@ -69,19 +89,25 @@ resource "azurerm_storage_account" "example" {
 # =========================================
 
 resource "azurerm_storage_queue" "events" {
-  name                 = "eventgrid-events"
-  storage_account_name = data.azurerm_storage_account.example.name
+  name               = "eventgrid-events"
+  storage_account_id = azurerm_storage_account.example.id
+
+  depends_on = [azurerm_role_assignment.terraform_queue_contributor]
 }
 
 resource "azurerm_storage_queue" "events_deadletter" {
-  name                 = "eventgrid-deadletter"
-  storage_account_name = data.azurerm_storage_account.example.name
+  name               = "eventgrid-deadletter"
+  storage_account_id = azurerm_storage_account.example.id
+
+  depends_on = [azurerm_role_assignment.terraform_queue_contributor]
 }
 
 resource "azurerm_storage_container" "deadletter" {
   name                  = "deadletter"
   container_access_type = "private"
-  storage_account_name  = data.azurerm_storage_account.example.name
+  storage_account_id    = azurerm_storage_account.example.id
+
+  depends_on = [azurerm_role_assignment.terraform_blob_contributor]
 }
 
 # =========================================
@@ -95,7 +121,7 @@ module "eventgrid_system_topic" {
   # Required Variables
   name                   = "evgt-storage-example"
   parent_id              = azurerm_resource_group.example.id
-  source_arm_resource_id = data.azurerm_storage_account.example.id
+  source_arm_resource_id = azurerm_storage_account.example.id
   topic_type             = "Microsoft.Storage.StorageAccounts"
   # Optional: Event Subscriptions
   event_subscriptions = {
@@ -108,7 +134,7 @@ module "eventgrid_system_topic" {
         }
         destination = {
           storage_queue = {
-            resource_id                           = data.azurerm_storage_account.example.id
+            resource_id                           = azurerm_storage_account.example.id
             queue_name                            = azurerm_storage_queue.events.name
             queue_message_time_to_live_in_seconds = 300
           }
@@ -117,7 +143,7 @@ module "eventgrid_system_topic" {
 
       dead_letter_destination = {
         storage_blob = {
-          resource_id         = data.azurerm_storage_account.example.id
+          resource_id         = azurerm_storage_account.example.id
           blob_container_name = azurerm_storage_container.deadletter.name
         }
       }
@@ -143,26 +169,30 @@ module "eventgrid_system_topic" {
   identity = {
     type = "SystemAssigned"
   }
-  # Optional: Add resource lock for production
-  locks = {
-    kind = "CanNotDelete"
-    name = "lock-evgt-storage"
-  }
-  # Optional: Role Assignment for Event Grid system topic
-  role_assignments = {
-    storage_queue_sender = {
-      role_definition_id_or_name = "Storage Queue Data Message Sender"
-      principal_id               = data.azapi_client_config.current.object_id
-      principal_type             = "User"
-      description                = "Allow Event Grid to send messages to storage queue"
-    }
-  }
   # Optional: Tags
   tags = {
     Environment = "Development"
     Example     = "Storage"
     ManagedBy   = "Terraform"
   }
+}
+
+# =========================================
+# RBAC FOR EVENT GRID EVENT SUBSCRIPTION IDENTITY
+# =========================================
+
+# Grant Event Grid event subscription's managed identity permission to send to queue
+resource "azurerm_role_assignment" "eventgrid_queue_sender" {
+  principal_id         = module.eventgrid_system_topic.event_subscription_principal_ids["storage_queue_subscription"]
+  scope                = azurerm_storage_account.example.id
+  role_definition_name = "Storage Queue Data Message Sender"
+}
+
+# Grant Event Grid event subscription's managed identity permission to write to deadletter blob
+resource "azurerm_role_assignment" "eventgrid_blob_contributor" {
+  principal_id         = module.eventgrid_system_topic.event_subscription_principal_ids["storage_queue_subscription"]
+  scope                = azurerm_storage_account.example.id
+  role_definition_name = "Storage Blob Data Contributor"
 }
 
 # =========================================
@@ -191,11 +221,16 @@ The following requirements are needed by this module:
 The following resources are used by this module:
 
 - [azurerm_resource_group.example](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/resource_group) (resource)
+- [azurerm_role_assignment.eventgrid_blob_contributor](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) (resource)
+- [azurerm_role_assignment.eventgrid_queue_sender](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) (resource)
+- [azurerm_role_assignment.terraform_blob_contributor](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) (resource)
+- [azurerm_role_assignment.terraform_queue_contributor](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/role_assignment) (resource)
 - [azurerm_storage_account.example](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_account) (resource)
 - [azurerm_storage_container.deadletter](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_container) (resource)
 - [azurerm_storage_queue.events](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_queue) (resource)
 - [azurerm_storage_queue.events_deadletter](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_queue) (resource)
 - [azapi_client_config.current](https://registry.terraform.io/providers/azure/azapi/latest/docs/data-sources/client_config) (data source)
+- [azurerm_client_config.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) (data source)
 
 <!-- markdownlint-disable MD013 -->
 ## Required Inputs

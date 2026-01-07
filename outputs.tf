@@ -12,6 +12,14 @@ DESCRIPTION
   value       = { for k, v in module.event_subscriptions : k => v.name }
 }
 
+output "event_subscription_principal_ids" {
+  description = <<DESCRIPTION
+A map of event subscription keys to their managed identity principal IDs.
+Use these to grant RBAC permissions for the event subscription identities to access destination resources.
+DESCRIPTION
+  value       = { for k, v in module.event_subscriptions : k => v.principal_id }
+}
+
 output "identity" {
   description = <<DESCRIPTION
 The managed identity configuration of the Event Grid System Topic, including principal_id and tenant_id for system-assigned identity.

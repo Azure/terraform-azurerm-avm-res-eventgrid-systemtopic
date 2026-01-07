@@ -572,6 +572,11 @@ Description: A map of event subscription keys to their Azure Resource Manager ID
 
 Description: A map of event subscription keys to their names.
 
+### <a name="output_event_subscription_principal_ids"></a> [event\_subscription\_principal\_ids](#output\_event\_subscription\_principal\_ids)
+
+Description: A map of event subscription keys to their managed identity principal IDs.  
+Use these to grant RBAC permissions for the event subscription identities to access destination resources.
+
 ### <a name="output_identity"></a> [identity](#output\_identity)
 
 Description: The managed identity configuration of the Event Grid System Topic, including principal\_id and tenant\_id for system-assigned identity.

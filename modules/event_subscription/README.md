@@ -477,6 +477,10 @@ The following outputs are exported:
 
 Description: The name of the event subscription.
 
+### <a name="output_principal_id"></a> [principal\_id](#output\_principal\_id)
+
+Description: The principal ID of the event subscription's managed identity.
+
 ### <a name="output_resource"></a> [resource](#output\_resource)
 
 Description: The full event subscription resource object.
