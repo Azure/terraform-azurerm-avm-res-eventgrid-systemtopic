@@ -69,60 +69,44 @@ variable "topic_type" {
   nullable    = false
 }
 
-# Optional Variables
-variable "identity" {
-  type = object({
-    type         = string
-    identity_ids = optional(list(string))
-  })
-  description = <<-EOT
-    An identity block that defines the managed identity configuration.
-    - type: The type of Managed Service Identity. Possible values are 'SystemAssigned', 'UserAssigned', 'SystemAssigned, UserAssigned'
-    - identity_ids: A list of User Assigned Managed Identity IDs (required when type is 'UserAssigned' or 'SystemAssigned, UserAssigned')
-  EOT
-  default     = null
-}
-
-variable "tags" {
-  type        = map(string)
-  description = "A mapping of tags to assign to the Event Grid System Topic."
-  default     = {}
-}
-
-variable "locks" {
-  type = object({
-    name = optional(string, null)
-    kind = string
-  })
-  description = <<-EOT
-    Controls the Resource Lock configuration for this resource. The following properties can be specified:
-    - `kind` - (Required) The type of lock. Possible values are 'CanNotDelete' and 'ReadOnly'.
-    - `name` - (Optional) The name of the lock. If not specified, a name will be generated based on the `kind` value.
-  EOT
-  default     = null
-}
-
-variable "role_assignments" {
+variable "diagnostic_settings" {
   type = map(object({
-    role_definition_id_or_name             = string
-    principal_id                           = string
-    condition                              = optional(string, null)
-    condition_version                      = optional(string, null)
-    delegated_managed_identity_resource_id = optional(string, null)
-    principal_type                         = optional(string, null)
-    skip_service_principal_aad_check       = optional(bool, false)
+    name                                     = optional(string, null)
+    log_categories                           = optional(set(string), [])
+    log_groups                               = optional(set(string), ["allLogs"])
+    metric_categories                        = optional(set(string), ["AllMetrics"])
+    log_analytics_destination_type           = optional(string, "Dedicated")
+    workspace_resource_id                    = optional(string, null)
+    storage_account_resource_id              = optional(string, null)
+    event_hub_authorization_rule_resource_id = optional(string, null)
+    event_hub_name                           = optional(string, null)
+    marketplace_partner_resource_id          = optional(string, null)
   }))
-  description = <<-EOT
-    A map of role assignments to create on this resource. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
-    - `role_definition_id_or_name` - (Required) The ID or name of the role definition to assign to the principal.
-    - `principal_id` - (Required) The ID of the principal to assign the role to.
-    - `condition` - (Optional) The condition which will be used when creating a role assignment.
-    - `condition_version` - (Optional) The version of the condition. Possible values are "2.0". Leave blank if no condition is used.
-    - `delegated_managed_identity_resource_id` - (Optional) The delegated Azure Resource Id which contains a Managed Identity.
-    - `principal_type` - (Optional) The type of the `principal_id`. Possible values are `User`, `Group`, `ServicePrincipal` and `ForeignGroup`.
-    - `skip_service_principal_aad_check` - (Optional) If the principal_id is a newly provisioned Service Principal set this value to true to skip the Azure Active Directory check which may fail due to replication lag.
-  EOT
   default     = {}
+  description = <<-EOT
+    A map of diagnostic settings to create on the resource. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
+    - `name` - (Optional) The name of the diagnostic setting. One will be generated if not set.
+    - `log_categories` - (Optional) A set of log categories to send to the log analytics workspace. Defaults to `[]`.
+    - `log_groups` - (Optional) A set of log groups to send to the log analytics workspace. Defaults to `["allLogs"]`.
+    - `metric_categories` - (Optional) A set of metric categories to send to the log analytics workspace. Defaults to `["AllMetrics"]`.
+    - `log_analytics_destination_type` - (Optional) The destination type for the diagnostic setting. Possible values are `Dedicated` and `AzureDiagnostics`. Defaults to `Dedicated`.
+    - `workspace_resource_id` - (Optional) The resource ID of the log analytics workspace to send logs and metrics to.
+    - `storage_account_resource_id` - (Optional) The resource ID of the storage account to send logs and metrics to.
+    - `event_hub_authorization_rule_resource_id` - (Optional) The resource ID of the event hub authorization rule to send logs and metrics to.
+    - `event_hub_name` - (Optional) The name of the event hub. If none is specified, the default event hub will be selected.
+    - `marketplace_partner_resource_id` - (Optional) The full ARM resource ID of the Marketplace resource to which you would like to send Diagnostic LogsLogs.
+  EOT
+  nullable    = false
+}
+
+variable "enable_telemetry" {
+  type        = bool
+  default     = true
+  description = <<DESCRIPTION
+This variable controls whether or not telemetry is enabled for the module.
+For more information see <https://aka.ms/avm/telemetryinfo>.
+If it is set to false, then no telemetry will be collected.
+DESCRIPTION
   nullable    = false
 }
 
@@ -492,42 +476,59 @@ DESCRIPTION
   }
 }
 
-variable "diagnostic_settings" {
-  type = map(object({
-    name                                     = optional(string, null)
-    log_categories                           = optional(set(string), [])
-    log_groups                               = optional(set(string), ["allLogs"])
-    metric_categories                        = optional(set(string), ["AllMetrics"])
-    log_analytics_destination_type           = optional(string, "Dedicated")
-    workspace_resource_id                    = optional(string, null)
-    storage_account_resource_id              = optional(string, null)
-    event_hub_authorization_rule_resource_id = optional(string, null)
-    event_hub_name                           = optional(string, null)
-    marketplace_partner_resource_id          = optional(string, null)
-  }))
+# Optional Variables
+variable "identity" {
+  type = object({
+    type         = string
+    identity_ids = optional(list(string))
+  })
+  default     = null
   description = <<-EOT
-    A map of diagnostic settings to create on the resource. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
-    - `name` - (Optional) The name of the diagnostic setting. One will be generated if not set.
-    - `log_categories` - (Optional) A set of log categories to send to the log analytics workspace. Defaults to `[]`.
-    - `log_groups` - (Optional) A set of log groups to send to the log analytics workspace. Defaults to `["allLogs"]`.
-    - `metric_categories` - (Optional) A set of metric categories to send to the log analytics workspace. Defaults to `["AllMetrics"]`.
-    - `log_analytics_destination_type` - (Optional) The destination type for the diagnostic setting. Possible values are `Dedicated` and `AzureDiagnostics`. Defaults to `Dedicated`.
-    - `workspace_resource_id` - (Optional) The resource ID of the log analytics workspace to send logs and metrics to.
-    - `storage_account_resource_id` - (Optional) The resource ID of the storage account to send logs and metrics to.
-    - `event_hub_authorization_rule_resource_id` - (Optional) The resource ID of the event hub authorization rule to send logs and metrics to.
-    - `event_hub_name` - (Optional) The name of the event hub. If none is specified, the default event hub will be selected.
-    - `marketplace_partner_resource_id` - (Optional) The full ARM resource ID of the Marketplace resource to which you would like to send Diagnostic LogsLogs.
+    An identity block that defines the managed identity configuration.
+    - type: The type of Managed Service Identity. Possible values are 'SystemAssigned', 'UserAssigned', 'SystemAssigned, UserAssigned'
+    - identity_ids: A list of User Assigned Managed Identity IDs (required when type is 'UserAssigned' or 'SystemAssigned, UserAssigned')
   EOT
+}
+
+variable "locks" {
+  type = object({
+    name = optional(string, null)
+    kind = string
+  })
+  default     = null
+  description = <<-EOT
+    Controls the Resource Lock configuration for this resource. The following properties can be specified:
+    - `kind` - (Required) The type of lock. Possible values are 'CanNotDelete' and 'ReadOnly'.
+    - `name` - (Optional) The name of the lock. If not specified, a name will be generated based on the `kind` value.
+  EOT
+}
+
+variable "role_assignments" {
+  type = map(object({
+    role_definition_id_or_name             = string
+    principal_id                           = string
+    condition                              = optional(string, null)
+    condition_version                      = optional(string, null)
+    delegated_managed_identity_resource_id = optional(string, null)
+    principal_type                         = optional(string, null)
+    skip_service_principal_aad_check       = optional(bool, false)
+  }))
   default     = {}
+  description = <<-EOT
+    A map of role assignments to create on this resource. The map key is deliberately arbitrary to avoid issues where map keys maybe unknown at plan time.
+    - `role_definition_id_or_name` - (Required) The ID or name of the role definition to assign to the principal.
+    - `principal_id` - (Required) The ID of the principal to assign the role to.
+    - `condition` - (Optional) The condition which will be used when creating a role assignment.
+    - `condition_version` - (Optional) The version of the condition. Possible values are "2.0". Leave blank if no condition is used.
+    - `delegated_managed_identity_resource_id` - (Optional) The delegated Azure Resource Id which contains a Managed Identity.
+    - `principal_type` - (Optional) The type of the `principal_id`. Possible values are `User`, `Group`, `ServicePrincipal` and `ForeignGroup`.
+    - `skip_service_principal_aad_check` - (Optional) If the principal_id is a newly provisioned Service Principal set this value to true to skip the Azure Active Directory check which may fail due to replication lag.
+  EOT
   nullable    = false
 }
-variable "enable_telemetry" {
-  type        = bool
-  default     = true
-  description = <<DESCRIPTION
-This variable controls whether or not telemetry is enabled for the module.
-For more information see <https://aka.ms/avm/telemetryinfo>.
-If it is set to false, then no telemetry will be collected.
-DESCRIPTION
-  nullable    = false
+
+variable "tags" {
+  type        = map(string)
+  default     = {}
+  description = "A mapping of tags to assign to the Event Grid System Topic."
 }

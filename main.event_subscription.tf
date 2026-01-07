@@ -4,8 +4,8 @@ module "event_subscriptions" {
   source   = "./modules/event_subscription"
   for_each = var.event_subscriptions
 
-  system_topic_resource_id           = azapi_resource.this.id
   name                               = each.value.name
+  system_topic_resource_id           = azapi_resource.this.id
   dead_letter_destination            = each.value.dead_letter_destination
   dead_letter_with_resource_identity = each.value.dead_letter_with_resource_identity
   delivery_with_resource_identity    = each.value.delivery_with_resource_identity

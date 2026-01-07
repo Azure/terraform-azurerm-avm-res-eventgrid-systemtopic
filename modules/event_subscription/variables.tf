@@ -1,3 +1,13 @@
+variable "name" {
+  type        = string
+  description = "The name of the event subscription."
+
+  validation {
+    condition     = can(regex("^[a-zA-Z0-9\\-]{3,64}$", var.name))
+    error_message = "The name must be between 3 and 64 characters and can contain only letters, numbers and hyphens."
+  }
+}
+
 variable "system_topic_resource_id" {
   type        = string
   description = <<DESCRIPTION
@@ -8,16 +18,6 @@ DESCRIPTION
   validation {
     condition     = can(regex("^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft.EventGrid/systemTopics/[^/]+$", var.system_topic_resource_id))
     error_message = "system_topic_resource_id must be a valid Event Grid System Topic resource ID."
-  }
-}
-
-variable "name" {
-  type        = string
-  description = "The name of the event subscription."
-
-  validation {
-    condition     = can(regex("^[a-zA-Z0-9\\-]{3,64}$", var.name))
-    error_message = "The name must be between 3 and 64 characters and can contain only letters, numbers and hyphens."
   }
 }
 

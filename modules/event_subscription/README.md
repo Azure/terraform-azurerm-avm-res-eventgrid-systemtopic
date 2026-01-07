@@ -96,16 +96,16 @@ The following resources are used by this module:
 
 The following input variables are required:
 
+### <a name="input_name"></a> [name](#input\_name)
+
+Description: The name of the event subscription.
+
+Type: `string`
+
 ### <a name="input_system_topic_resource_id"></a> [system\_topic\_resource\_id](#input\_system\_topic\_resource\_id)
 
 Description: The resource ID of the Event Grid System Topic to create the subscription on.  
 This can be an existing system topic not managed by the parent module.
-
-Type: `string`
-
-### <a name="input_name"></a> [name](#input\_name)
-
-Description: The name of the event subscription.
 
 Type: `string`
 
