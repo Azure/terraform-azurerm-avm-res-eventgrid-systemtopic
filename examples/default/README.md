@@ -111,6 +111,30 @@ resource "azurerm_storage_container" "deadletter" {
 }
 
 # =========================================
+# USER-ASSIGNED MANAGED IDENTITY FOR EVENT SUBSCRIPTION
+# =========================================
+
+resource "azurerm_user_assigned_identity" "eventgrid_subscription" {
+  location            = azurerm_resource_group.example.location
+  name                = "id-eventgrid-subscription"
+  resource_group_name = azurerm_resource_group.example.name
+}
+
+# Grant the identity permission to send to storage queue
+resource "azurerm_role_assignment" "eventgrid_queue_sender" {
+  principal_id         = azurerm_user_assigned_identity.eventgrid_subscription.principal_id
+  scope                = azurerm_storage_account.example.id
+  role_definition_name = "Storage Queue Data Message Sender"
+}
+
+# Grant the identity permission to write to deadletter blob
+resource "azurerm_role_assignment" "eventgrid_blob_contributor" {
+  principal_id         = azurerm_user_assigned_identity.eventgrid_subscription.principal_id
+  scope                = azurerm_storage_account.example.id
+  role_definition_name = "Storage Blob Data Contributor"
+}
+
+# =========================================
 # EVENT GRID SYSTEM TOPIC
 # =========================================
 
@@ -130,7 +154,8 @@ module "eventgrid_system_topic" {
 
       delivery_with_resource_identity = {
         identity = {
-          type = "SystemAssigned"
+          type                   = "UserAssigned"
+          user_assigned_identity = azurerm_user_assigned_identity.eventgrid_subscription.id
         }
         destination = {
           storage_queue = {
@@ -175,24 +200,11 @@ module "eventgrid_system_topic" {
     Example     = "Storage"
     ManagedBy   = "Terraform"
   }
-}
 
-# =========================================
-# RBAC FOR EVENT GRID EVENT SUBSCRIPTION IDENTITY
-# =========================================
-
-# Grant Event Grid event subscription's managed identity permission to send to queue
-resource "azurerm_role_assignment" "eventgrid_queue_sender" {
-  principal_id         = module.eventgrid_system_topic.event_subscription_principal_ids["storage_queue_subscription"]
-  scope                = azurerm_storage_account.example.id
-  role_definition_name = "Storage Queue Data Message Sender"
-}
-
-# Grant Event Grid event subscription's managed identity permission to write to deadletter blob
-resource "azurerm_role_assignment" "eventgrid_blob_contributor" {
-  principal_id         = module.eventgrid_system_topic.event_subscription_principal_ids["storage_queue_subscription"]
-  scope                = azurerm_storage_account.example.id
-  role_definition_name = "Storage Blob Data Contributor"
+  depends_on = [
+    azurerm_role_assignment.eventgrid_queue_sender,
+    azurerm_role_assignment.eventgrid_blob_contributor
+  ]
 }
 
 # =========================================
@@ -229,6 +241,7 @@ The following resources are used by this module:
 - [azurerm_storage_container.deadletter](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_container) (resource)
 - [azurerm_storage_queue.events](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_queue) (resource)
 - [azurerm_storage_queue.events_deadletter](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/storage_queue) (resource)
+- [azurerm_user_assigned_identity.eventgrid_subscription](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/resources/user_assigned_identity) (resource)
 - [azapi_client_config.current](https://registry.terraform.io/providers/azure/azapi/latest/docs/data-sources/client_config) (data source)
 - [azurerm_client_config.current](https://registry.terraform.io/providers/hashicorp/azurerm/latest/docs/data-sources/client_config) (data source)
 

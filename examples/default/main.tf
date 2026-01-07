@@ -115,16 +115,16 @@ resource "azurerm_user_assigned_identity" "eventgrid_subscription" {
 
 # Grant the identity permission to send to storage queue
 resource "azurerm_role_assignment" "eventgrid_queue_sender" {
+  principal_id         = azurerm_user_assigned_identity.eventgrid_subscription.principal_id
   scope                = azurerm_storage_account.example.id
   role_definition_name = "Storage Queue Data Message Sender"
-  principal_id         = azurerm_user_assigned_identity.eventgrid_subscription.principal_id
 }
 
 # Grant the identity permission to write to deadletter blob
 resource "azurerm_role_assignment" "eventgrid_blob_contributor" {
+  principal_id         = azurerm_user_assigned_identity.eventgrid_subscription.principal_id
   scope                = azurerm_storage_account.example.id
   role_definition_name = "Storage Blob Data Contributor"
-  principal_id         = azurerm_user_assigned_identity.eventgrid_subscription.principal_id
 }
 
 # =========================================
@@ -147,7 +147,7 @@ module "eventgrid_system_topic" {
 
       delivery_with_resource_identity = {
         identity = {
-          type                 = "UserAssigned"
+          type                   = "UserAssigned"
           user_assigned_identity = azurerm_user_assigned_identity.eventgrid_subscription.id
         }
         destination = {
