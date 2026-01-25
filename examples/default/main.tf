@@ -48,6 +48,15 @@ resource "azurerm_resource_group" "this" {
   name     = module.naming.resource_group.name_unique
 }
 
+# Create a storage account to use as the source for the system topic
+resource "azurerm_storage_account" "this" {
+  name                     = module.naming.storage_account.name_unique
+  resource_group_name      = azurerm_resource_group.this.name
+  location                 = azurerm_resource_group.this.location
+  account_tier             = "Standard"
+  account_replication_type = "LRS"
+}
+
 # This is the module call
 # Do not specify location here due to the randomization above.
 # Leaving location as `null` will cause the module to use the resource group location
@@ -55,10 +64,17 @@ resource "azurerm_resource_group" "this" {
 module "test" {
   source = "../../"
 
-  # source             = "Azure/avm-<res/ptn>-<name>/azurerm"
-  # ...
+  # source             = "Azure/avm-res-eventgrid-systemtopic/azurerm"
+  # version            = "~> 0.1"
+  
+  name                = module.naming.eventgrid_system_topic.name_unique
   location            = azurerm_resource_group.this.location
-  name                = "TODO" # TODO update with module.naming.<RESOURCE_TYPE>.name_unique
   resource_group_name = azurerm_resource_group.this.name
+  source              = azurerm_storage_account.this.id
+  topic_type          = "Microsoft.Storage.StorageAccounts"
   enable_telemetry    = var.enable_telemetry # see variables.tf
+  
+  tags = {
+    environment = "test"
+  }
 }
