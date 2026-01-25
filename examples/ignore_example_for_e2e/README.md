@@ -13,6 +13,7 @@ terraform {
       source  = "hashicorp/azurerm"
       version = "~> 4.21"
     }
+    # tflint-ignore: terraform_unused_required_providers
     modtm = {
       source  = "azure/modtm"
       version = "~> 0.3"
@@ -31,6 +32,7 @@ provider "azurerm" {
 
 ## Section to provide a random Azure region for the resource group
 # This allows us to randomize the region for the resource group.
+# tflint-ignore: terraform_module_version
 module "regions" {
   source  = "Azure/avm-utl-regions/azurerm"
   version = "~> 0.1"
@@ -44,6 +46,7 @@ resource "random_integer" "region_index" {
 ## End of section to provide a random Azure region for the resource group
 
 # This ensures we have unique CAF compliant names for our resources.
+# tflint-ignore: terraform_module_version
 module "naming" {
   source  = "Azure/naming/azurerm"
   version = "~> 0.3"
