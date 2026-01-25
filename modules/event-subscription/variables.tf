@@ -1,3 +1,16 @@
+variable "destination" {
+  type = object({
+    endpointType = string
+    properties   = any
+  })
+  description = <<DESCRIPTION
+The destination where events are delivered. Must include:
+- `endpointType` - The type of endpoint (e.g., WebHook, EventHub, StorageQueue, ServiceBusQueue, ServiceBusTopic, AzureFunction, HybridConnection)
+- `properties` - Properties specific to the endpoint type (e.g., resourceId for EventHub)
+DESCRIPTION
+  nullable    = false
+}
+
 variable "name" {
   type        = string
   description = "The name of the event subscription."
@@ -14,17 +27,47 @@ variable "system_topic_id" {
   nullable    = false
 }
 
-variable "destination" {
+variable "dead_letter_destination" {
   type = object({
     endpointType = string
     properties   = any
   })
+  default     = null
   description = <<DESCRIPTION
-The destination where events are delivered. Must include:
-- `endpointType` - The type of endpoint (e.g., WebHook, EventHub, StorageQueue, ServiceBusQueue, ServiceBusTopic, AzureFunction, HybridConnection)
-- `properties` - Properties specific to the endpoint type (e.g., resourceId for EventHub)
+Dead letter destination configuration:
+- `endpointType` - Must be StorageBlobDeadLetter
+- `properties` - Properties including resourceId and blobContainerName
 DESCRIPTION
-  nullable    = false
+}
+
+variable "dead_letter_with_resource_identity" {
+  type = object({
+    identity = object({
+      type                 = string
+      userAssignedIdentity = optional(string)
+    })
+    deadLetterDestination = object({
+      endpointType = string
+      properties   = any
+    })
+  })
+  default     = null
+  description = "Dead letter destination with managed identity configuration."
+}
+
+variable "delivery_with_resource_identity" {
+  type = object({
+    identity = object({
+      type                 = string
+      userAssignedIdentity = optional(string)
+    })
+    destination = object({
+      endpointType = string
+      properties   = any
+    })
+  })
+  default     = null
+  description = "Delivery destination with managed identity configuration."
 }
 
 variable "event_delivery_schema" {
@@ -38,13 +81,19 @@ variable "event_delivery_schema" {
   }
 }
 
+variable "expiration_time_utc" {
+  type        = string
+  default     = null
+  description = "Expiration time for the event subscription in UTC (ISO 8601 format)."
+}
+
 variable "filter" {
   type = object({
-    subjectBeginsWith      = optional(string)
-    subjectEndsWith        = optional(string)
-    includedEventTypes     = optional(list(string))
-    isSubjectCaseSensitive = optional(bool, false)
-    advancedFilters        = optional(list(any), [])
+    subjectBeginsWith               = optional(string)
+    subjectEndsWith                 = optional(string)
+    includedEventTypes              = optional(list(string))
+    isSubjectCaseSensitive          = optional(bool, false)
+    advancedFilters                 = optional(list(any), [])
     enableAdvancedFilteringOnArrays = optional(bool, false)
   })
   default     = {}
@@ -76,53 +125,4 @@ Retry policy for event delivery:
 - `eventTimeToLiveInMinutes` - Time to live for events in minutes (default: 1440)
 - `maxDeliveryAttempts` - Maximum delivery attempts (default: 30)
 DESCRIPTION
-}
-
-variable "expiration_time_utc" {
-  type        = string
-  default     = null
-  description = "Expiration time for the event subscription in UTC (ISO 8601 format)."
-}
-
-variable "dead_letter_destination" {
-  type = object({
-    endpointType = string
-    properties   = any
-  })
-  default     = null
-  description = <<DESCRIPTION
-Dead letter destination configuration:
-- `endpointType` - Must be StorageBlobDeadLetter
-- `properties` - Properties including resourceId and blobContainerName
-DESCRIPTION
-}
-
-variable "dead_letter_with_resource_identity" {
-  type = object({
-    identity = object({
-      type                   = string
-      userAssignedIdentity   = optional(string)
-    })
-    deadLetterDestination = object({
-      endpointType = string
-      properties   = any
-    })
-  })
-  default     = null
-  description = "Dead letter destination with managed identity configuration."
-}
-
-variable "delivery_with_resource_identity" {
-  type = object({
-    identity = object({
-      type                   = string
-      userAssignedIdentity   = optional(string)
-    })
-    destination = object({
-      endpointType = string
-      properties   = any
-    })
-  })
-  default     = null
-  description = "Delivery destination with managed identity configuration."
 }

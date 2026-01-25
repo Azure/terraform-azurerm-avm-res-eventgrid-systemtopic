@@ -1,20 +1,22 @@
 # EventGrid System Topic resource using AzAPI provider
 resource "azapi_resource" "this" {
-  type      = "Microsoft.EventGrid/systemTopics@2025-04-01-preview"
-  name      = var.name
   location  = var.location
+  name      = var.name
   parent_id = "/subscriptions/${data.azapi_client_config.current.subscription_id}/resourceGroups/${var.resource_group_name}"
-
+  type      = "Microsoft.EventGrid/systemTopics@2025-04-01-preview"
   body = {
     properties = {
-      source    = var.source
+      source    = var.source_resource_id
       topicType = var.topic_type
     }
     identity = local.managed_identities.system_assigned_user_assigned
     tags     = var.tags
   }
-
+  create_headers         = var.enable_telemetry ? { "User-Agent" : local.avm_azapi_header } : null
+  delete_headers         = var.enable_telemetry ? { "User-Agent" : local.avm_azapi_header } : null
+  read_headers           = var.enable_telemetry ? { "User-Agent" : local.avm_azapi_header } : null
   response_export_values = ["*"]
+  update_headers         = var.enable_telemetry ? { "User-Agent" : local.avm_azapi_header } : null
 
   lifecycle {
     ignore_changes = [

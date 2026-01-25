@@ -1,3 +1,9 @@
+# Note: EventGrid System Topics do not support customer managed keys
+# This variable has been removed as it's not applicable
+
+# Note: EventGrid System Topics do not support private endpoints
+# The private_endpoints and private_endpoints_manage_dns_zone_group variables have been removed
+
 variable "location" {
   type        = string
   description = "Azure region where the resource should be deployed."
@@ -20,7 +26,7 @@ variable "resource_group_name" {
   description = "The resource group where the resources will be deployed."
 }
 
-variable "source" {
+variable "source_resource_id" {
   type        = string
   description = "The ARM resource ID of the source Azure resource for this EventGrid System Topic."
   nullable    = false
@@ -31,9 +37,6 @@ variable "topic_type" {
   description = "The type of system topic source (e.g., Microsoft.Storage.StorageAccounts, Microsoft.Resources.ResourceGroups)."
   nullable    = false
 }
-
-# Note: EventGrid System Topics do not support customer managed keys
-# This variable has been removed as it's not applicable
 
 variable "diagnostic_settings" {
   type = map(object({
@@ -125,9 +128,6 @@ Controls the Managed Identity configuration on this resource. The following prop
 DESCRIPTION
   nullable    = false
 }
-
-# Note: EventGrid System Topics do not support private endpoints
-# The private_endpoints and private_endpoints_manage_dns_zone_group variables have been removed
 
 variable "role_assignments" {
   type = map(object({

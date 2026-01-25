@@ -50,11 +50,11 @@ resource "azurerm_resource_group" "this" {
 
 # Create a storage account to use as the source for the system topic
 resource "azurerm_storage_account" "this" {
+  account_replication_type = "LRS"
+  account_tier             = "Standard"
+  location                 = azurerm_resource_group.this.location
   name                     = module.naming.storage_account.name_unique
   resource_group_name      = azurerm_resource_group.this.name
-  location                 = azurerm_resource_group.this.location
-  account_tier             = "Standard"
-  account_replication_type = "LRS"
 }
 
 # This is the module call
@@ -64,16 +64,12 @@ resource "azurerm_storage_account" "this" {
 module "test" {
   source = "../../"
 
-  # source             = "Azure/avm-res-eventgrid-systemtopic/azurerm"
-  # version            = "~> 0.1"
-  
-  name                = module.naming.eventgrid_system_topic.name_unique
   location            = azurerm_resource_group.this.location
+  name                = module.naming.eventgrid_system_topic.name_unique
   resource_group_name = azurerm_resource_group.this.name
-  source              = azurerm_storage_account.this.id
+  source_resource_id  = azurerm_storage_account.this.id
   topic_type          = "Microsoft.Storage.StorageAccounts"
   enable_telemetry    = var.enable_telemetry # see variables.tf
-  
   tags = {
     environment = "test"
   }
