@@ -38,6 +38,8 @@ variable "topic_type" {
   nullable    = false
 }
 
+# Note: EventGrid System Topics do not support diagnostic settings
+# tflint-ignore: terraform_unused_declarations
 variable "diagnostic_settings" {
   type = map(object({
     name                                     = optional(string, null)

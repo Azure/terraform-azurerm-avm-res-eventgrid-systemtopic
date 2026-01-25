@@ -50,7 +50,7 @@ resource "azurerm_resource_group" "this" {
 
 # Create a storage account to use as the source for the system topic
 resource "azurerm_storage_account" "this" {
-  account_replication_type = "LRS"
+  account_replication_type = "GRS"
   account_tier             = "Standard"
   location                 = azurerm_resource_group.this.location
   name                     = module.naming.storage_account.name_unique
