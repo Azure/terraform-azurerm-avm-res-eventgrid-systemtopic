@@ -1,3 +1,3 @@
 # Default example
 
-This deploys the module in its simplest form.
+This deploys the generic virtual network starter, not an Event Grid System Topic.
